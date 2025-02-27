@@ -1,9 +1,11 @@
 using System;
+using System.Collections;
 using UnityEngine;
 
 public class PlayerMove : MonoBehaviour
 {
     public float speed = 5.0f;
+    public GameObject explosionFactory;
 
     void Update()
     {
@@ -34,7 +36,10 @@ public class PlayerMove : MonoBehaviour
     {
         if (collision.gameObject.tag == "Enemy")
         {
-            
+            ScoreManager.Instance().gameOver = true;
+            GameObject explosion = Instantiate(explosionFactory);
+            explosion.transform.position = transform.position;
+            gameObject.SetActive(false);
         }
     }
 }

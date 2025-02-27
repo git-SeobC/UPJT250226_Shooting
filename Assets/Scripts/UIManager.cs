@@ -1,5 +1,5 @@
 using System.Collections;
-using System.Runtime.CompilerServices;
+using System.Threading;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
@@ -12,56 +12,224 @@ class ScoreManager
         if (instance == null) instance = new ScoreManager();
         return instance;
     }
-    private static Text scoreText;
-    public static Text ScoreText()
+    private Text scoreText;
+    private Text bestScoreText;
+    public float difficultyLevel = 0.5f;
+    public bool gameOver = false; 
+    public void SetScoreText()
     {
         if (scoreText == null) scoreText = GameObject.Find("UI/ScoreText").GetComponent<Text>();
-        return scoreText;
+        if (bestScoreText == null) bestScoreText = GameObject.Find("UI/BestScore").GetComponent<Text>();
     }
     private int score;
+    private int bestScore;
     public void AddScore(int pScore)
     {
         score += pScore;
-        ScoreText().text = $"Score : {score}";
+        if (score > bestScore)
+        {
+            bestScore = score;
+            PlayerPrefs.SetInt("BestScore", bestScore);
+        }
+        scoreText.text = $"Score : {score}";
+        bestScoreText.text = $"Best : {bestScore}";
     }
+
     public void ScoreReset()
     {
         score = 0;
-        ScoreText().text = $"Score : {score}";
-    }
-    public void SetScore(int pScore)
-    {
-        ScoreText().text = $"Score : {pScore}";
+        bestScore = PlayerPrefs.GetInt("BestScore");
+        scoreText.text = $"Score : {score}";
+        bestScoreText.text = $"Best : {bestScore}";
     }
 }
 
-
-
 public class UIManager : MonoBehaviour
 {
-    private Canvas mainUi;
     private Text timeText;
-    private int countDown = 99;
+    private Text gameOverText;
+    private Image background;
+    private Button retryBtn;
+    private GameObject player;
+
+    private string content; // 출력할 내용
+    private float delay = 0.2f; // 읽는 속도
+
+    public float fadeDuration = 1.5f; // 페이드 인 지속 시간 (초)
+    public float textDelay = 0.5f;     // 배경 후 텍스트 등장 딜레이
+    public int countDown = 100;
+
+    private int countDownHalf;
+    private int countDownOneThird;
+    private int initialCountDown;
+
+    private void Awake()
+    {
+        ScoreManager.Instance();
+        ScoreManager.Instance().SetScoreText();
+    }
 
     private void Start()
     {
-        ScoreManager.Instance();
-        //mainUi = GameObject.Find("UI").GetComponent<Canvas>();
         timeText = GameObject.Find("UI/TimeText").GetComponent<Text>();
-        countDown = 99;
+        gameOverText = GameObject.Find("UI/GameOverText").GetComponent<Text>();
+        background = GameObject.Find("UI/Pangpang").GetComponent<Image>();
+        retryBtn = GameObject.Find("UI/RetryBtn").GetComponent<Button>();
+        player = GameObject.Find("Player").gameObject;
+
+        retryBtn.gameObject.SetActive(false);
+        content = "Game Over";
         timeText.text = $"{countDown}";
+
+        countDownHalf = (int)(countDown * 0.5f);
+        countDownOneThird = (int)(countDown * 0.33f);
+        initialCountDown = countDown;
 
         ScoreManager.Instance().ScoreReset();
 
         StartCoroutine(TimeCountDown());
     }
 
+    public void RetryBtnClick()
+    {
+        ScoreManager.Instance().gameOver = false;
+
+        #region Comment
+        //// Player 오브젝트 재생성
+        //if (GameObject.FindGameObjectWithTag("Player") == null)
+        //{
+        //    GameObject playerPrefab = Resources.Load<GameObject>("Prefabs/Player");
+        //    if (playerPrefab != null)
+        //    {
+        //        Instantiate(playerPrefab, Vector3.zero, Quaternion.identity);
+        //    }
+        //    else
+        //    {
+        //        Debug.LogError("Player 프리팹을 찾을 수 없습니다.");
+        //    }
+        //}
+        #endregion
+
+        if (player.activeSelf == false)
+        {
+            player.SetActive(true);
+            player.transform.position = new Vector3(-6.9f, 1f, 0f);
+        }
+
+        // 게임 상태 초기화
+        ResetGameState();
+
+        StartCoroutine(TimeCountDown());
+    }
+
+    private void ResetGameState()
+    {
+        ScoreManager.Instance().ScoreReset();
+
+        countDown = initialCountDown;
+        retryBtn.gameObject.SetActive(false);
+        Color color = gameOverText.color;
+        color.a = 0;
+        gameOverText.color = color;
+        color = background.color;
+        color.a = 0;
+        background.color = color;
+    }
+
+
+
     IEnumerator TimeCountDown()
     {
-        yield return new WaitForSeconds(1);
-        countDown--;
-        timeText.text = $"{countDown}";
-        if (countDown > 0) StartCoroutine(TimeCountDown());
+        while (countDown > 0)
+        {
+            if (ScoreManager.Instance().gameOver) break;
+            yield return new WaitForSeconds(1);
+            countDown--;
+            timeText.text = $"{countDown}";
+            if (countDown < countDownOneThird)
+            {
+                ScoreManager.Instance().difficultyLevel = 0.1f;
+            }
+            else if (countDown < countDownHalf)
+            {
+                ScoreManager.Instance().difficultyLevel = 0.3f;
+            }
+            else
+            {
+                ScoreManager.Instance().difficultyLevel = 0.5f;
+            }
+        }
+        StartCoroutine(FadeIn());
+        StartCoroutine(TypingGameOver());
     }
+
+    IEnumerator TypingGameOver()
+    {
+        yield return new WaitForSeconds(1);
+        gameOverText.text = ""; // 현재 화면 메세지 비움
+
+        int typingCount = 0; // 타이핑 카운트 0 초기화
+        float elapsedTime = 0f;
+
+        // 텍스트 페이드 인
+        elapsedTime = 0f;
+        while (elapsedTime < fadeDuration)
+        {
+            float alpha = elapsedTime / fadeDuration;
+            Color textColor = gameOverText.color;
+            textColor.a = alpha;
+            gameOverText.color = textColor;
+
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+
+        // 텍스트를 완전히 불투명하게 설정
+        Color finalTextColor = gameOverText.color;
+        finalTextColor.a = 1;
+        gameOverText.color = finalTextColor;
+
+        // 현재 카운트가 컨텐츠의 길이와 다르다면 
+        while (typingCount != content.Length)
+        {
+            if (typingCount < content.Length)
+            {
+                gameOverText.text += content[typingCount].ToString();
+                // 현재 카운트에 해당하는 단어 하나를 메세지 텍스트 UI에 전달
+                typingCount++;
+                // 카운트를 1 증가
+            }
+            yield return new WaitForSeconds(delay);
+            // 현재의 딜레이만큼 대기
+        }
+
+        retryBtn.gameObject.SetActive(true);
+
+    }
+
+    IEnumerator FadeIn()
+    {
+        ScoreManager.Instance().gameOver = true;
+        yield return new WaitForSeconds(1);
+        float elapsedTime = 0f;
+
+        // 배경 페이드 인
+        while (elapsedTime < fadeDuration)
+        {
+            float alpha = elapsedTime / fadeDuration;
+            Color bgColor = background.color;
+            bgColor.a = alpha;
+            background.color = bgColor;
+
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+
+        // 배경을 완전히 불투명하게 설정
+        Color finalBgColor = background.color;
+        finalBgColor.a = 1;
+        background.color = finalBgColor;
+    }
+
 
 }

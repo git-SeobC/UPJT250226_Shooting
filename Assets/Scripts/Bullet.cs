@@ -1,28 +1,21 @@
-using System.Collections;
 using UnityEngine;
 
 public class Bullet : MonoBehaviour
 {
     public float speed = 5.0f;
-
+    private float gravity = -9.8f;
+    private float verticalSpeed = 0f;
+    //private GameObject firePosition;
     void Update()
     {
         transform.position += Vector3.right * speed * Time.deltaTime;
-
-        //StartCoroutine(BulletDestroy());
+        verticalSpeed += gravity * Time.deltaTime;
+        transform.position += Vector3.down * verticalSpeed * Time.deltaTime;
     }
 
-    IEnumerator BulletDestroy()
+    private void OnEnable()
     {
-        yield return new WaitForSeconds(5);
-        Destroy(gameObject);
-    }
-
-    private void OnCollisionEnter(Collision collision)
-    {
-        if (collision.gameObject.tag == "Enemy")
-        {
-            Destroy(gameObject);
-        }
+        verticalSpeed = 0;
     }
 }
+
