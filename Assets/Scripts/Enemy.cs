@@ -14,7 +14,7 @@ public class Enemy : MonoBehaviour
     {
         int rand = Random.Range(0, 10);
         // 10개 중에서 3개 약 30% 확률
-        if (rand < 8)
+        if (rand < 7)
         {
             var target = GameObject.FindGameObjectWithTag("Player");
             if (target == null) dir = Vector3.left;

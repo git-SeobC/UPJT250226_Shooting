@@ -15,7 +15,7 @@ class ScoreManager
     private Text scoreText;
     private Text bestScoreText;
     public float difficultyLevel = 0.5f;
-    public bool gameOver = false; 
+    public bool gameOver = false;
     public void SetScoreText()
     {
         if (scoreText == null) scoreText = GameObject.Find("UI/ScoreText").GetComponent<Text>();
@@ -49,10 +49,10 @@ public class UIManager : MonoBehaviour
     private Text timeText;
     private Text gameOverText;
     private Image background;
+    private Image backgroundWin;
     private Button retryBtn;
     private GameObject player;
 
-    private string content; // 출력할 내용
     private float delay = 0.2f; // 읽는 속도
 
     public float fadeDuration = 1.5f; // 페이드 인 지속 시간 (초)
@@ -74,11 +74,11 @@ public class UIManager : MonoBehaviour
         timeText = GameObject.Find("UI/TimeText").GetComponent<Text>();
         gameOverText = GameObject.Find("UI/GameOverText").GetComponent<Text>();
         background = GameObject.Find("UI/Pangpang").GetComponent<Image>();
+        backgroundWin = GameObject.Find("UI/PangPangWin").GetComponent<Image>();
         retryBtn = GameObject.Find("UI/RetryBtn").GetComponent<Button>();
         player = GameObject.Find("Player").gameObject;
 
         retryBtn.gameObject.SetActive(false);
-        content = "Game Over";
         timeText.text = $"{countDown}";
 
         countDownHalf = (int)(countDown * 0.5f);
@@ -93,7 +93,7 @@ public class UIManager : MonoBehaviour
     public void RetryBtnClick()
     {
         ScoreManager.Instance().gameOver = false;
-
+        countDown = initialCountDown;
         #region Comment
         //// Player 오브젝트 재생성
         //if (GameObject.FindGameObjectWithTag("Player") == null)
@@ -125,8 +125,6 @@ public class UIManager : MonoBehaviour
     private void ResetGameState()
     {
         ScoreManager.Instance().ScoreReset();
-
-        countDown = initialCountDown;
         retryBtn.gameObject.SetActive(false);
         Color color = gameOverText.color;
         color.a = 0;
@@ -134,6 +132,7 @@ public class UIManager : MonoBehaviour
         color = background.color;
         color.a = 0;
         background.color = color;
+        backgroundWin.color = color;
     }
 
 
@@ -148,7 +147,7 @@ public class UIManager : MonoBehaviour
             timeText.text = $"{countDown}";
             if (countDown < countDownOneThird)
             {
-                ScoreManager.Instance().difficultyLevel = 0.1f;
+                ScoreManager.Instance().difficultyLevel = 0.05f;
             }
             else if (countDown < countDownHalf)
             {
@@ -159,17 +158,27 @@ public class UIManager : MonoBehaviour
                 ScoreManager.Instance().difficultyLevel = 0.5f;
             }
         }
-        StartCoroutine(FadeIn());
-        StartCoroutine(TypingGameOver());
+
+        if (countDown > 0)
+        {
+            StartCoroutine(FadeIn(background));
+            StartCoroutine(TypingGameOver(false));
+        }
+        else
+        {
+            StartCoroutine(FadeIn(backgroundWin));
+            StartCoroutine(TypingGameOver(true));
+        }
     }
 
-    IEnumerator TypingGameOver()
+    IEnumerator TypingGameOver(bool pWin)
     {
         yield return new WaitForSeconds(1);
         gameOverText.text = ""; // 현재 화면 메세지 비움
 
         int typingCount = 0; // 타이핑 카운트 0 초기화
         float elapsedTime = 0f;
+        string content = pWin ? "HAPYP PANGPANGY~♥" : "GAME OBER";
 
         // 텍스트 페이드 인
         elapsedTime = 0f;
@@ -178,6 +187,9 @@ public class UIManager : MonoBehaviour
             float alpha = elapsedTime / fadeDuration;
             Color textColor = gameOverText.color;
             textColor.a = alpha;
+            textColor.r = pWin ? 0 : 255;
+            textColor.g = 0;
+            textColor.b = pWin ? 255 : 0;
             gameOverText.color = textColor;
 
             elapsedTime += Time.deltaTime;
@@ -207,7 +219,7 @@ public class UIManager : MonoBehaviour
 
     }
 
-    IEnumerator FadeIn()
+    IEnumerator FadeIn(Image pBack)
     {
         ScoreManager.Instance().gameOver = true;
         yield return new WaitForSeconds(1);
@@ -217,9 +229,9 @@ public class UIManager : MonoBehaviour
         while (elapsedTime < fadeDuration)
         {
             float alpha = elapsedTime / fadeDuration;
-            Color bgColor = background.color;
+            Color bgColor = pBack.color;
             bgColor.a = alpha;
-            background.color = bgColor;
+            pBack.color = bgColor;
 
             elapsedTime += Time.deltaTime;
             yield return null;
