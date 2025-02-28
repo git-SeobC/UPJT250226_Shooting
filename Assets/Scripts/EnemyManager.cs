@@ -5,8 +5,7 @@ public class EnemyManager : MonoBehaviour
     // 현재 시간
     public float currentTime;
 
-    // 일정 시간
-    public float createTime = 0.5f;
+    private float createTime;
 
     // 생성할 적
     public GameObject enemyFactory;
@@ -29,6 +28,7 @@ public class EnemyManager : MonoBehaviour
         for (int i = 0; i < poolSize; i++)
         {
             var enemy = Instantiate(enemyFactory);
+            enemy.transform.position = new Vector3(-3.5f, 6 - (i * 0.1f), 0);
             enemyObjectPool[i] = enemy;
             enemy.SetActive(false);
         }

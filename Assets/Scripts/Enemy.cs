@@ -13,7 +13,6 @@ public class Enemy : MonoBehaviour
     private void OnEnable()
     {
         int rand = Random.Range(0, 10);
-        // 10개 중에서 3개 약 30% 확률
         if (rand < 7)
         {
             var target = GameObject.FindGameObjectWithTag("Player");
@@ -29,6 +28,12 @@ public class Enemy : MonoBehaviour
         }
     }
 
+    private void OnDisable()
+    {
+        GameObject explosion = Instantiate(explosionFactory);
+        explosion.transform.position = transform.position;
+    }
+
     private void Update()
     {
         if (ScoreManager.Instance().gameOver) gameObject.SetActive(false);
@@ -38,24 +43,16 @@ public class Enemy : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
-        GameObject explosion = Instantiate(explosionFactory);
-        explosion.transform.position = transform.position;
+        //GameObject explosion = Instantiate(explosionFactory);
+        //explosion.transform.position = transform.position;
 
         // 물체의 이름에 Bullet이 포함되어 있다면
         if (collision.gameObject.name.Contains("Bullet"))
         {
             collision.gameObject.SetActive(false);
         }
-        else
-        {
-            //if (true /*UI 무적이 켜져있으면 off 되도록 기능 추가*/)
-            //{
-            //    Destroy(collision.gameObject);
-            //}
-        }
 
         gameObject.SetActive(false);
-        //Destroy(gameObject);
 
         if (collision.gameObject.layer == LayerMask.NameToLayer("Bullet"))
         {
